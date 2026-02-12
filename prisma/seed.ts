@@ -67,7 +67,6 @@ async function main() {
         update: {
             role: 'SUPER_ADMIN',
             isActive: true,
-            isVerified: true,
         },
         create: {
             firstName: 'Super',
@@ -76,7 +75,6 @@ async function main() {
             password: hashedPassword,
             role: 'SUPER_ADMIN',
             isActive: true,
-            isVerified: true,
         },
     });
 
