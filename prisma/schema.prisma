@@ -7,6 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model State {
+  id   String @id @default(uuid())
+  name String @unique
+  code String @unique
+
+  @@map("State")
+}
+
+model City {
+  id      String @id @default(uuid())
+  name    String
+  stateId String @map("state_id")
+
+  @@unique([stateId, name])
+  @@index([stateId])
+  @@map("City")
+}
+
 model Chapter {
   id        String   @id @default(uuid())
   name      String   @unique
