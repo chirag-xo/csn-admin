@@ -55,6 +55,8 @@ model User {
   state                             String?
   role                              String             @default("USER")
   isActive                          Boolean            @default(true)
+  stateId                           String?
+  cityId                            String?
   Connection_addresseeIdToUser      Connection[]       @relation("Connection_addresseeIdToUser")
   Connection_requesterIdToUser      Connection[]       @relation("Connection_requesterIdToUser")
   Event                             Event[]
