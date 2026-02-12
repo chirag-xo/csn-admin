@@ -21,8 +21,13 @@ export async function middleware(request: NextRequest) {
             }
         }
 
-        // Redirect root/login to dashboard if logged in AS ADMIN
-        if (pathname === '/' || pathname === '/login') {
+        // Redirect root to login
+        if (pathname === '/') {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
+
+        // Redirect /login to dashboard if logged in AS ADMIN
+        if (pathname === '/login') {
             const session = await getSession();
             if (session) {
                 const allowedRoles = ['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT'];
