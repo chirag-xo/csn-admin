@@ -4,14 +4,14 @@ import { requireAuth } from '@/lib/auth';
 import { canVerifyUsers } from '@/lib/permissions';
 import { logAudit } from '@/lib/audit';
 
-export async function PATCH(
+export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         // Authenticate
         const session = await requireAuth();
-        const { id } = await params;
 
         // Check permission
         if (!canVerifyUsers(session)) {

@@ -5,11 +5,11 @@ import { canManageChapters, canAssignPresident } from '@/lib/permissions';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await requireAuth();
-        const { id: chapterId } = params;
+        const { id: chapterId } = await params;
         const body = await request.json();
         const { userId } = body;
 
@@ -38,7 +38,7 @@ export async function POST(
         if (session.role === 'SUPER_ADMIN') hasPermission = true;
         else if (session.role === 'STATE_DIRECTOR' && session.stateId === chapter.stateId) hasPermission = true;
         else if (session.role === 'CITY_DIRECTOR' && session.cityId === chapter.cityId) hasPermission = true;
-        else if (session.role === 'PRESIDENT' && session.chapterId === chapter.id) hasPermission = true;
+        // else if (session.role === 'PRESIDENT' && session.chapterId === chapter.id) hasPermission = true; 
         // Note: session.chapterId might need to be refreshed or we trust the session. 
         // Alternatively, check against chapter.presidentId if we fetched it? 
         // Let's stick to session role context. 
@@ -86,7 +86,7 @@ export async function POST(
                 data: {
                     chapterId,
                     userId,
-                    role: 'MEMBER',
+                    // role: 'MEMBER', // Default is MEMBER
                 },
             }),
             // If there was a pending join request, mark it approved (optional, but good cleanup)

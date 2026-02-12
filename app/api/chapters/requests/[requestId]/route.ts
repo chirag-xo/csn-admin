@@ -9,10 +9,10 @@ const actionSchema = z.object({
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { requestId: string } }
+    { params }: { params: Promise<{ requestId: string }> }
 ) {
     try {
-        const { requestId } = params;
+        const { requestId } = await params;
         const session = await requireAuth();
         const body = await request.json();
 

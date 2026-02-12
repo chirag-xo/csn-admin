@@ -4,14 +4,14 @@ import { requireAuth } from '@/lib/auth';
 import { requireRole } from '@/lib/permissions';
 import { logAudit } from '@/lib/audit';
 
-export async function PATCH(
+export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         // Authenticate
         const session = await requireAuth();
-        const { id } = await params;
 
         // Only SUPER_ADMIN and STATE_DIRECTOR can deactivate users
         requireRole(session, ['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR']);

@@ -5,14 +5,14 @@ import { canAssignRole } from '@/lib/permissions';
 import { roleAssignmentSchema } from '@/lib/validations';
 import { logAudit } from '@/lib/audit';
 
-export async function PATCH(
+export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         // Authenticate
         const session = await requireAuth();
-        const { id } = await params;
 
         // Parse body
         const body = await request.json();

@@ -6,13 +6,13 @@ import { assignPresidentSchema } from '@/lib/validations';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Authenticate
         const session = await requireAuth();
 
-        const { id: chapterId } = params;
+        const { id: chapterId } = await params;
 
         // Parse and validate body
         const body = await request.json();
