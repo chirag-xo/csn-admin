@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model State {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  code     String    @unique
+  chapters Chapter[]
+  cities   City[]
+
+  @@map("State")
+}
+
+model City {
+  id       String    @id @default(uuid())
+  name     String
+  stateId  String    @map("state_id")
+  chapters Chapter[]
+  state    State     @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  @@unique([stateId, name])
+  @@index([stateId])
+  @@map("City")
+}
+
+model Chapter {
+  id           String          @id @default(uuid())
+  name         String
+  cityId       String?         @map("city_id")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  createdBy    String?         @map("created_by")
+  presidentId  String?         @map("president_id")
+  stateId      String?         @map("state_id")
+  status       ChapterStatus   @default(ACTIVE)
+  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
+  cityRel      City?           @relation(fields: [cityId], references: [id])
+  state        State?          @relation(fields: [stateId], references: [id])
+  Event        Event[]
+  User         User[]
+  members      ChapterMember[]
+  joinRequests JoinRequest[]
+
+  @@unique([name, cityId])
+  @@index([stateId])
+  @@index([cityId])
+  @@index([stateId, cityId])
+  @@map("Chapter")
+}
+
+model JoinRequest {
+  id           String    @id @default(uuid())
+  chapterId    String    @map("chapter_id")
+  userId       String    @map("user_id")
+  status       String    @default("PENDING")
+  reviewedById String?   @map("reviewed_by_id")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  chapter      Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, userId])
+  @@index([chapterId])
+  @@index([userId])
+  @@index([status])
+  @@map("join_requests")
+}
+
+model ChapterMember {
+  id        String   @id @default(uuid())
+  chapterId String   @map("chapter_id")
+  userId    String   @map("user_id")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  role      String   @default("MEMBER")
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, userId])
+  @@index([userId])
+  @@index([chapterId])
+  @@map("chapter_members")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  performerId String   @map("performer_id")
+  targetId    String?  @map("target_id")
+  details     String?
+  timestamp   DateTime @default(now())
+
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+model User {
+  id                                String             @id @default(uuid())
+  email                             String             @unique
+  password                          String
+  firstName                         String
+  lastName                          String
+  company                           String?
+  position                          String?
+  city                              String?
+  phone                             String?
+  profilePhoto                      String?
+  tagline                           String?
+  bio                               String?
+  emailVerified                     Boolean            @default(false)
+  emailVerifiedAt                   DateTime?
+  phoneVerified                     Boolean            @default(false)
+  phoneVerifiedAt                   DateTime?
+  communityVerified                 Boolean            @default(false)
+  socialLinks                       String?
+  chapterId                         String?
+  createdAt                         DateTime           @default(now())
+  updatedAt                         DateTime           @updatedAt
+  profilePhotoPublicId              String?
+  topConnectionIds                  String[]
+  topProjectDescription             String?
+  topProjectTitle                   String?
+  cityId                            String?            @map("city_id")
+  isActive                          Boolean            @default(true)
+  isVerified                        Boolean            @default(false)
+  name                              String?
+  role                              Role               @default(USER)
+  stateId                           String?            @map("state_id")
+  Connection_addresseeIdToUser      Connection[]       @relation("Connection_addresseeIdToUser")
+  Connection_requesterIdToUser      Connection[]       @relation("Connection_requesterIdToUser")
+  Event                             Event[]
+  EventAttendee                     EventAttendee[]
+  EventPhoto                        EventPhoto[]
+  GalleryPhoto                      GalleryPhoto[]
+  Referral_fromUserIdToUser         Referral[]         @relation("Referral_fromUserIdToUser")
+  Referral_toUserIdToUser           Referral[]         @relation("Referral_toUserIdToUser")
+  Testimonial_fromUserIdToUser      Testimonial[]      @relation("Testimonial_fromUserIdToUser")
+  Testimonial_toUserIdToUser        Testimonial[]      @relation("Testimonial_toUserIdToUser")
+  Chapter                           Chapter?           @relation(fields: [chapterId], references: [id])
+  UserInterest                      UserInterest[]
+  UserPrivacy                       UserPrivacy?
+  UserVerification_userIdToUser     UserVerification[] @relation("UserVerification_userIdToUser")
+  UserVerification_verifiedByToUser UserVerification[] @relation("UserVerification_verifiedByToUser")
+  ChapterMember                     ChapterMember[]
+  JoinRequest                       JoinRequest[]
+
+  @@index([email])
+  @@index([chapterId])
+  @@index([communityVerified])
+  @@index([emailVerified])
+  @@index([stateId, cityId])
+  @@map("User")
+}
+
+model Connection {
+  id                                String    @id
+  requesterId                       String
+  addresseeId                       String
+  status                            String    @default("PENDING")
+  requestMessage                    String?
+  lastActionBy                      String?
+  createdAt                         DateTime  @default(now())
+  updatedAt                         DateTime  @updatedAt
+  acceptedAt                        DateTime?
+  User_Connection_addresseeIdToUser User      @relation("Connection_addresseeIdToUser", fields: [addresseeId], references: [id], onDelete: Cascade)
+  User_Connection_requesterIdToUser User      @relation("Connection_requesterIdToUser", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@index([status])
+}
+
+model ContactRequest {
+  id        String   @id
+  name      String
+  email     String
+  reason    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([status])
+}
+
+model Event {
+  id             String          @id
+  title          String
+  description    String
+  type           String
+  location       String?
+  isVirtual      Boolean         @default(false)
+  virtualLink    String?
+  date           DateTime
+  endDate        DateTime?
+  isRecurring    Boolean         @default(false)
+  recurrenceType String?
+  isPublic       Boolean         @default(true)
+  chapterId      String?
+  creatorId      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  entryFee       Int?
+  Chapter        Chapter?        @relation(fields: [chapterId], references: [id])
+  User           User            @relation(fields: [creatorId], references: [id])
+  EventAttendee  EventAttendee[]
+  EventPhoto     EventPhoto[]
+  Testimonial    Testimonial[]
+
+  @@index([chapterId])
+  @@index([creatorId])
+  @@index([date])
+  @@index([type])
+}
+
+model EventAttendee {
+  id        String   @id
+  eventId   String
+  userId    String
+  status    String   @default("GOING")
+  role      String   @default("ATTENDEE")
+  createdAt DateTime @default(now())
+  Event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([status])
+  @@index([userId])
+}
+
+model EventPhoto {
+  id         String   @id
+  eventId    String
+  url        String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  Event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User       User     @relation(fields: [uploadedBy], references: [id])
+
+  @@index([eventId])
+  @@index([uploadedBy])
+}
+
+model GalleryPhoto {
+  id                 String    @id
+  userId             String
+  url                String
+  caption            String?
+  isFeatured         Boolean   @default(false)
+  featuredAt         DateTime?
+  uploadedAt         DateTime  @default(now())
+  cloudinaryPublicId String?
+  User               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isFeatured])
+  @@index([uploadedAt])
+  @@index([userId])
+}
+
+model Interest {
+  id               String           @id
+  name             String           @unique
+  categoryId       String
+  InterestCategory InterestCategory @relation(fields: [categoryId], references: [id])
+  UserInterest     UserInterest[]
+
+  @@index([categoryId])
+}
+
+model InterestCategory {
+  id       String     @id
+  name     String     @unique
+  type     String
+  Interest Interest[]
+}
+
+model Referral {
+  id                             String       @id
+  fromUserId                     String
+  toUserId                       String
+  type                           String       @default("BUSINESS")
+  description                    String
+  contactName                    String?
+  contactEmail                   String?
+  contactPhone                   String?
+  businessValue                  Float?
+  status                         String       @default("PENDING")
+  notes                          String?
+  createdAt                      DateTime     @default(now())
+  updatedAt                      DateTime     @updatedAt
+  User_Referral_fromUserIdToUser User         @relation("Referral_fromUserIdToUser", fields: [fromUserId], references: [id])
+  User_Referral_toUserIdToUser   User         @relation("Referral_toUserIdToUser", fields: [toUserId], references: [id])
+  Testimonial                    Testimonial?
+
+  @@index([createdAt])
+  @@index([fromUserId])
+  @@index([status])
+  @@index([toUserId])
+}
+
+model Testimonial {
+  id                                String    @id
+  fromUserId                        String
+  toUserId                          String
+  type                              String
+  content                           String
+  referralId                        String?   @unique
+  eventId                           String?
+  visibility                        String    @default("PUBLIC")
+  createdAt                         DateTime  @default(now())
+  Event                             Event?    @relation(fields: [eventId], references: [id])
+  User_Testimonial_fromUserIdToUser User      @relation("Testimonial_fromUserIdToUser", fields: [fromUserId], references: [id])
+  Referral                          Referral? @relation(fields: [referralId], references: [id])
+  User_Testimonial_toUserIdToUser   User      @relation("Testimonial_toUserIdToUser", fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId, referralId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([type])
+}
+
+model UserInterest {
+  id         String   @id
+  userId     String
+  interestId String
+  visibility String   @default("PUBLIC")
+  createdAt  DateTime @default(now())
+  Interest   Interest @relation(fields: [interestId], references: [id])
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, interestId])
+  @@index([interestId])
+  @@index([userId])
+}
+
+model UserPrivacy {
+  id                  String @id
+  userId              String @unique
+  emailVisibility     String @default("PUBLIC")
+  phoneVisibility     String @default("PRIVATE")
+  eventsVisibility    String @default("CONNECTIONS")
+  interestsVisibility String @default("PUBLIC")
+  activityVisibility  String @default("CONNECTIONS")
+  User                User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserVerification {
+  id                                     String   @id
+  userId                                 String
+  verifiedBy                             String
+  createdAt                              DateTime @default(now())
+  User_UserVerification_userIdToUser     User     @relation("UserVerification_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+  User_UserVerification_verifiedByToUser User     @relation("UserVerification_verifiedByToUser", fields: [verifiedBy], references: [id])
+
+  @@unique([userId, verifiedBy])
+  @@index([userId])
+  @@index([verifiedBy])
+}
+
+enum ChapterStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Role {
+  USER
+  PRESIDENT
+  CITY_DIRECTOR
+  STATE_DIRECTOR
+  SUPER_ADMIN
+}
