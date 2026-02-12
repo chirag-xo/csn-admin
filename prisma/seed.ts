@@ -44,6 +44,24 @@ const INDIAN_STATES = [
     { name: 'Puducherry', code: 'PY' },
 ];
 
+const CITIES_BY_STATE = [
+    { stateName: 'Maharashtra', cities: ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad', 'Thane', 'Solapur'] },
+    { stateName: 'Karnataka', cities: ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Gulbarga'] },
+    { stateName: 'Tamil Nadu', cities: ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli'] },
+    { stateName: 'Gujarat', cities: ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar'] },
+    { stateName: 'Rajasthan', cities: ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer', 'Bikaner'] },
+    { stateName: 'West Bengal', cities: ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri'] },
+    { stateName: 'Uttar Pradesh', cities: ['Lucknow', 'Kanpur', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Noida'] },
+    { stateName: 'Delhi', cities: ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'] },
+    { stateName: 'Telangana', cities: ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'] },
+    { stateName: 'Andhra Pradesh', cities: ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Tirupati'] },
+    { stateName: 'Kerala', cities: ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam'] },
+    { stateName: 'Punjab', cities: ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala'] },
+    { stateName: 'Haryana', cities: ['Gurgaon', 'Faridabad', 'Panipat', 'Ambala', 'Karnal'] },
+    { stateName: 'Bihar', cities: ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga'] },
+    { stateName: 'Madhya Pradesh', cities: ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior', 'Ujjain'] },
+];
+
 async function main() {
     console.log('🌱 Starting seed...');
 
@@ -57,6 +75,33 @@ async function main() {
         });
     }
     console.log(`✅ Created ${INDIAN_STATES.length} states`);
+
+    // Create cities
+    console.log('🏙️  Creating cities...');
+    for (const stateData of CITIES_BY_STATE) {
+        const state = await db.state.findFirst({
+            where: { name: stateData.stateName },
+        });
+
+        if (state) {
+            for (const cityName of stateData.cities) {
+                await db.city.upsert({
+                    where: {
+                        stateId_name: {
+                            stateId: state.id,
+                            name: cityName,
+                        },
+                    },
+                    update: {},
+                    create: {
+                        name: cityName,
+                        stateId: state.id,
+                    },
+                });
+            }
+        }
+    }
+    console.log('✅ Cities created');
 
     // Create SUPER_ADMIN
     console.log('👤 Creating SUPER_ADMIN...');
