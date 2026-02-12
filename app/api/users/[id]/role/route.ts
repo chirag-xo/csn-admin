@@ -5,7 +5,7 @@ import { canAssignRole } from '@/lib/permissions';
 import { roleAssignmentSchema } from '@/lib/validations';
 import { logAudit } from '@/lib/audit';
 
-export async function POST(
+export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
