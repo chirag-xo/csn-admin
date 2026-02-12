@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 import { canVerifyUsers } from '@/lib/permissions';
 import { logAudit } from '@/lib/audit';
 

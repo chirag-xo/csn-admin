@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 import { canManageChapters } from '@/lib/permissions';
 import { addMemberSchema } from '@/lib/validations';
 import { logAudit } from '@/lib/audit';
@@ -40,6 +40,7 @@ export async function PATCH(
             where: {
                 chapterId,
                 userId,
+                // role: 'MEMBER', // Role field doesn't exist on ChapterMember model
             },
         });
 

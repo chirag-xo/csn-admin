@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 import { z } from 'zod';
 
 const actionSchema = z.object({

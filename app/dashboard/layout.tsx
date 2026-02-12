@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import DashboardNav from '@/components/DashboardNav';
 import { AuthProvider } from '@/components/AuthProvider';

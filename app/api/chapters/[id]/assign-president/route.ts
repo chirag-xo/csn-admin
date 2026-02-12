@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 import { canAssignPresident, getChapterScopeFilter } from '@/lib/permissions';
 import { assignPresidentSchema } from '@/lib/validations';
 

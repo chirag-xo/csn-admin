@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: NextRequest) {
     try {

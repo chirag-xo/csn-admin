@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/session';
 import { getScopeFilter } from '@/lib/permissions';
 import { userFiltersSchema } from '@/lib/validations';
 
