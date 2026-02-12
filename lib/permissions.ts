@@ -1,5 +1,5 @@
-import { Role, User } from '@prisma/client';
-import { Session } from './session';
+import { User } from '@prisma/client';
+import { Session, Role } from './session';
 
 // Permission matrix: who can view what
 export function canViewUser(viewer: Session, targetUser: User): boolean {

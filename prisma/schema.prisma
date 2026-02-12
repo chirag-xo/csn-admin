@@ -8,17 +8,19 @@ datasource db {
 }
 
 model State {
-  id   String @id @default(uuid())
-  name String @unique
-  code String @unique
+  id       String    @id @default(uuid())
+  name     String    @unique
+  code     String    @unique
+  chapters Chapter[]
 
   @@map("State")
 }
 
 model City {
-  id      String @id @default(uuid())
-  name    String
-  stateId String @map("state_id")
+  id       String    @id @default(uuid())
+  name     String
+  stateId  String    @map("state_id")
+  chapters Chapter[]
 
   @@unique([stateId, name])
   @@index([stateId])
@@ -26,21 +28,24 @@ model City {
 }
 
 model Chapter {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  city      String   @default("Unknown")
-  cityId    String?
-  createdAt DateTime @default(now())
-  state     String?
-  stateId   String?
-  updatedAt DateTime @default(now())
-  Event     Event[]
-  User      User[]
+  id          String   @id @default(uuid())
+  name        String   @unique
+  cityId      String?
+  createdAt   DateTime @default(now())
+  createdBy   String?
+  presidentId String?
+  stateId     String?
+  status      String   @default("ACTIVE")
+  updatedAt   DateTime @default(now()) @updatedAt
+  state       State?   @relation(fields: [stateId], references: [id])
+  cityRel      City?            @relation(fields: [cityId], references: [id])
+  members      ChapterMember[]
+  joinRequests JoinRequest[]
+  Event        Event[]
+  User         User[]
 
   @@index([cityId])
-  @@index([city])
   @@index([stateId])
-  @@index([state])
   @@map("Chapter")
 }
 
@@ -53,6 +58,7 @@ model JoinRequest {
   reviewedAt   DateTime? @map("reviewed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+  chapter      Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@unique([chapterId, userId])
   @@index([chapterId])
@@ -67,6 +73,7 @@ model ChapterMember {
   userId    String   @map("user_id")
   joinedAt  DateTime @default(now()) @map("joined_at")
   role      String   @default("MEMBER")
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@unique([chapterId, userId])
   @@index([chapterId])
@@ -103,6 +110,7 @@ model User {
   state                             String?
   role                              String             @default("USER")
   isActive                          Boolean            @default(true)
+  isVerified                        Boolean            @default(false)
   stateId                           String?
   cityId                            String?
   Connection_addresseeIdToUser      Connection[]       @relation("Connection_addresseeIdToUser")
@@ -126,6 +134,21 @@ model User {
   @@index([communityVerified])
   @@index([emailVerified])
   @@map("User")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  performerId String   @map("performer_id")
+  targetId    String?  @map("target_id")
+  details     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([performerId])
+  @@index([targetId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Connection {
