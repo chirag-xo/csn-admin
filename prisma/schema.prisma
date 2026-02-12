@@ -7,96 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model State {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  code     String    @unique
-  chapters Chapter[]
-  cities   City[]
-
-  @@map("State")
-}
-
-model City {
-  id       String    @id @default(uuid())
-  name     String
-  stateId  String    @map("state_id")
-  chapters Chapter[]
-  state    State     @relation(fields: [stateId], references: [id], onDelete: Cascade)
-
-  @@unique([stateId, name])
-  @@index([stateId])
-  @@map("City")
-}
-
 model Chapter {
-  id           String          @id @default(uuid())
-  name         String
-  cityId       String?         @map("city_id")
-  createdAt    DateTime        @default(now()) @map("created_at")
-  createdBy    String?         @map("created_by")
-  presidentId  String?         @map("president_id")
-  stateId      String?         @map("state_id")
-  status       ChapterStatus   @default(ACTIVE)
-  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
-  cityRel      City?           @relation(fields: [cityId], references: [id])
-  state        State?          @relation(fields: [stateId], references: [id])
-  Event        Event[]
-  User         User[]
-  members      ChapterMember[]
-  joinRequests JoinRequest[]
-
-  @@unique([name, cityId])
-  @@index([stateId])
-  @@index([cityId])
-  @@index([stateId, cityId])
-  @@map("Chapter")
-}
-
-model JoinRequest {
-  id           String    @id @default(uuid())
-  chapterId    String    @map("chapter_id")
-  userId       String    @map("user_id")
-  status       String    @default("PENDING")
-  reviewedById String?   @map("reviewed_by_id")
-  reviewedAt   DateTime? @map("reviewed_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  chapter      Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([chapterId, userId])
-  @@index([chapterId])
-  @@index([userId])
-  @@index([status])
-  @@map("join_requests")
-}
-
-model ChapterMember {
   id        String   @id @default(uuid())
-  chapterId String   @map("chapter_id")
-  userId    String   @map("user_id")
-  joinedAt  DateTime @default(now()) @map("joined_at")
-  role      String   @default("MEMBER")
-  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @unique
+  city      String   @default("Unknown")
+  cityId    String?
+  createdAt DateTime @default(now())
+  state     String?
+  stateId   String?
+  updatedAt DateTime @default(now())
+  Event     Event[]
+  User      User[]
 
-  @@unique([chapterId, userId])
-  @@index([userId])
-  @@index([chapterId])
-  @@map("chapter_members")
-}
-
-model AuditLog {
-  id          String   @id @default(uuid())
-  action      String
-  performerId String   @map("performer_id")
-  targetId    String?  @map("target_id")
-  details     String?
-  timestamp   DateTime @default(now())
-
-  @@index([timestamp])
-  @@map("audit_logs")
+  @@index([cityId])
+  @@index([city])
+  @@index([stateId])
+  @@index([state])
+  @@map("Chapter")
 }
 
 model User {
@@ -125,12 +52,7 @@ model User {
   topConnectionIds                  String[]
   topProjectDescription             String?
   topProjectTitle                   String?
-  cityId                            String?            @map("city_id")
-  isActive                          Boolean            @default(true)
-  isVerified                        Boolean            @default(false)
-  name                              String?
-  role                              Role               @default(USER)
-  stateId                           String?            @map("state_id")
+  state                             String?
   Connection_addresseeIdToUser      Connection[]       @relation("Connection_addresseeIdToUser")
   Connection_requesterIdToUser      Connection[]       @relation("Connection_requesterIdToUser")
   Event                             Event[]
@@ -146,14 +68,11 @@ model User {
   UserPrivacy                       UserPrivacy?
   UserVerification_userIdToUser     UserVerification[] @relation("UserVerification_userIdToUser")
   UserVerification_verifiedByToUser UserVerification[] @relation("UserVerification_verifiedByToUser")
-  ChapterMember                     ChapterMember[]
-  JoinRequest                       JoinRequest[]
 
   @@index([email])
   @@index([chapterId])
   @@index([communityVerified])
   @@index([emailVerified])
-  @@index([stateId, cityId])
   @@map("User")
 }
 
@@ -361,17 +280,4 @@ model UserVerification {
   @@unique([userId, verifiedBy])
   @@index([userId])
   @@index([verifiedBy])
-}
-
-enum ChapterStatus {
-  ACTIVE
-  INACTIVE
-}
-
-enum Role {
-  USER
-  PRESIDENT
-  CITY_DIRECTOR
-  STATE_DIRECTOR
-  SUPER_ADMIN
 }
