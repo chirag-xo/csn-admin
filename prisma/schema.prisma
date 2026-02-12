@@ -53,6 +53,8 @@ model User {
   topProjectDescription             String?
   topProjectTitle                   String?
   state                             String?
+  role                              String             @default("USER")
+  isActive                          Boolean            @default(true)
   Connection_addresseeIdToUser      Connection[]       @relation("Connection_addresseeIdToUser")
   Connection_requesterIdToUser      Connection[]       @relation("Connection_requesterIdToUser")
   Event                             Event[]
