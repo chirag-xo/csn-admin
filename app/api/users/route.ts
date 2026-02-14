@@ -45,10 +45,15 @@ export async function GET(request: NextRequest) {
 
         // Add search filter
         if (search) {
+            const searchRole = search.trim().replace(/\s+/g, '_');
+
             where.OR = [
                 { firstName: { contains: search, mode: 'insensitive' } },
                 { lastName: { contains: search, mode: 'insensitive' } },
                 { email: { contains: search, mode: 'insensitive' } },
+                // Enable search by role (handling "State Director" -> "STATE_DIRECTOR")
+                { role: { contains: search, mode: 'insensitive' } },
+                { role: { contains: searchRole, mode: 'insensitive' } }
             ];
         }
 
@@ -83,12 +88,63 @@ export async function GET(request: NextRequest) {
         const stateMap = new Map(states.map(s => [s.id, s]));
         const cityMap = new Map(cities.map(c => [c.id, c]));
 
-        const enrichedUsers = users.map(user => ({
-            ...user,
-            name: `${user.firstName} ${user.lastName}`,
-            state: user.stateId ? stateMap.get(user.stateId) || null : null,
-            city: user.cityId ? cityMap.get(user.cityId) || null : null,
-        }));
+        // ------------------------------------------------------------------
+        // Fallback: finding state by city NAME for users with missing state
+        // ------------------------------------------------------------------
+        const usersNeedsStateLookup = users.filter(u => !u.stateId && !u.state && u.city);
+        const cityNamesToLookup = [...new Set(usersNeedsStateLookup.map(u => u.city).filter(Boolean) as string[])];
+
+        let cityByNameMap = new Map<string, any>();
+        if (cityNamesToLookup.length > 0) {
+            const foundCities = await db.city.findMany({
+                where: { name: { in: cityNamesToLookup } },
+                include: {
+                    // We need to fetch the stateId to lookup the state
+                }
+            });
+
+            // If we found cities, we need their states
+            const extraStateIds = [...new Set(foundCities.map(c => c.stateId).filter(Boolean))];
+            const extraStates = extraStateIds.length > 0
+                ? await db.state.findMany({ where: { id: { in: extraStateIds } } })
+                : [];
+
+            const extraStateMap = new Map(extraStates.map(s => [s.id, s]));
+
+            // Map City Name -> State Object
+            foundCities.forEach(c => {
+                if (c.stateId && extraStateMap.has(c.stateId)) {
+                    // We use the first match if multiple cities have same name
+                    if (!cityByNameMap.has(c.name)) {
+                        cityByNameMap.set(c.name, extraStateMap.get(c.stateId));
+                    }
+                }
+            });
+        }
+
+
+        const enrichedUsers = users.map(user => {
+            const stateObj = user.stateId ? stateMap.get(user.stateId) : null;
+            const cityObj = user.cityId ? cityMap.get(user.cityId) : null;
+
+            // Try to find state by existing ID -> then by text fallback -> then by city name lookup
+            let finalState = stateObj;
+            if (!finalState) {
+                if (user.state) {
+                    finalState = { name: user.state } as any;
+                } else if (user.city && cityByNameMap.has(user.city)) {
+                    finalState = cityByNameMap.get(user.city);
+                }
+            }
+
+            return {
+                ...user,
+                name: `${user.firstName} ${user.lastName}`,
+                // Fallback to string fields if relation lookup fails or ID is missing
+                state: finalState,
+                city: cityObj || (user.city ? { name: user.city } : null),
+            };
+        });
 
         return NextResponse.json({
             users: enrichedUsers,

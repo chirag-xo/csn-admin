@@ -68,25 +68,76 @@ export async function POST(
             );
         }
 
-        // Update chapter president in unified DB
-        const updatedChapter = await db.chapter.update({
-            where: { id: chapterId },
-            data: { presidentId: userId },
-            include: {
-                state: {
-                    select: {
-                        id: true,
-                        name: true,
-                        code: true,
+        // Update in transaction to ensure consistency
+        const updatedChapter = await db.$transaction(async (tx) => {
+            // 1. Fetch current chapter details to get old president
+            const currentChapter = await tx.chapter.findUnique({
+                where: { id: chapterId },
+                select: { presidentId: true }
+            });
+
+            // 2. Demote old president if exists
+            if (currentChapter?.presidentId) {
+                // Determine if we should set User role to USER. 
+                // Only do this if they are currently PRESIDENT. 
+                // We don't want to demote a CITY_DIRECTOR who happened to be acting as president.
+                const oldPrezUser = await tx.user.findUnique({
+                    where: { id: currentChapter.presidentId },
+                    select: { role: true }
+                });
+
+                if (oldPrezUser?.role === 'PRESIDENT') {
+                    await tx.user.update({
+                        where: { id: currentChapter.presidentId },
+                        data: { role: 'USER' }
+                    });
+                }
+
+                // Update ChapterMember role
+                // We need to find the membership record first or update many
+                await tx.chapterMember.updateMany({
+                    where: {
+                        chapterId,
+                        userId: currentChapter.presidentId
+                    },
+                    data: { role: 'MEMBER' }
+                });
+            }
+
+            // 3. Promote new president
+            await tx.user.update({
+                where: { id: userId },
+                data: { role: 'PRESIDENT' }
+            });
+
+            await tx.chapterMember.updateMany({
+                where: {
+                    chapterId,
+                    userId
+                },
+                data: { role: 'PRESIDENT' }
+            });
+
+            // 4. Update Chapter
+            return await tx.chapter.update({
+                where: { id: chapterId },
+                data: { presidentId: userId },
+                include: {
+                    state: {
+                        select: {
+                            id: true,
+                            name: true,
+                            code: true,
+                        },
+                    },
+                    cityRel: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
                     },
                 },
-                cityRel: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-            },
+            });
         });
 
         // Fetch president details from unified DB
