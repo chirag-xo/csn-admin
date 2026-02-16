@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
 // Define Role manually to avoid Prisma import in Edge runtime (middleware)
-export type Role = 'SUPER_ADMIN' | 'STATE_DIRECTOR' | 'CITY_DIRECTOR' | 'PRESIDENT' | 'USER';
+export type Role = 'SUPER_ADMIN' | 'STATE_DIRECTOR' | 'CITY_DIRECTOR' | 'PRESIDENT' | 'VICE_PRESIDENT' | 'SECRETARY' | 'USER';
 
 const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'fallback-secret-key-change-in-production'
