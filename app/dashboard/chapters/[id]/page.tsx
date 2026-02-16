@@ -58,6 +58,8 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
     const [membersLoading, setMembersLoading] = useState(false);
     const [membersPage, setMembersPage] = useState(1);
     const [membersTotal, setMembersTotal] = useState(0);
+    const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
+    const [removing, setRemoving] = useState(false);
 
     // Requests State
     const [requests, setRequests] = useState<JoinRequest[]>([]);
@@ -304,6 +306,30 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const handleRemoveMember = async () => {
+        if (!removeMemberId) return;
+        setRemoving(true);
+        try {
+            const res = await fetch(`/api/chapters/${id}/members/${removeMemberId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setRemoveMemberId(null);
+                fetchMembers(); // Refresh list
+                fetchChapter(); // Refresh count
+                alert('Member removed successfully');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to remove member');
+            }
+        } catch (error) {
+            alert('Network error');
+        } finally {
+            setRemoving(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center">Loading...</div>;
     if (error || !chapter) return <div className="p-8 text-center text-red-600">{error || 'Chapter not found'}</div>;
 
@@ -467,27 +493,41 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                                 <td>{member.user.email}</td>
                                                 <td>
                                                     <span className={`px-2 py-1 rounded text-xs font-medium ${member.role === 'PRESIDENT' ? 'bg-purple-100 text-purple-800' :
-                                                            member.role === 'VICE_PRESIDENT' ? 'bg-blue-100 text-blue-800' :
-                                                                member.role === 'SECRETARY' ? 'bg-yellow-100 text-yellow-800' :
-                                                                    'bg-gray-100 text-gray-600'
+                                                        member.role === 'VICE_PRESIDENT' ? 'bg-blue-100 text-blue-800' :
+                                                            member.role === 'SECRETARY' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-gray-100 text-gray-600'
                                                         }`}>
                                                         {member.role === 'MEMBER' ? 'Member' : member.role.replace('_', ' ')}
                                                     </span>
                                                 </td>
                                                 <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
                                                 <td>
-                                                    {canManageChapter() && member.role !== 'PRESIDENT' && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setRoleMember(member);
-                                                                setNewRole(member.role === 'MEMBER' ? 'VICE_PRESIDENT' : member.role);
-                                                                setShowRoleModal(true);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                                        >
-                                                            Manage Role
-                                                        </button>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {canManageChapter() && member.role !== 'PRESIDENT' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setRoleMember(member);
+                                                                        setNewRole(member.role === 'MEMBER' ? 'VICE_PRESIDENT' : member.role);
+                                                                        setShowRoleModal(true);
+                                                                    }}
+                                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                                >
+                                                                    Manage Role
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setRemoveMemberId(member.id)}
+                                                                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                                                                    title="Remove Member"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                                                                        <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                                                                    </svg>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -632,6 +672,17 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                     loading={deleting}
                     onConfirm={handleDelete}
                     onCancel={() => setShowDeleteConfirm(false)}
+                />
+            )}
+
+            {removeMemberId && (
+                <ConfirmDialog
+                    title="Remove Member?"
+                    message="Are you sure you want to remove this member? This action cannot be undone."
+                    confirmVariant="danger"
+                    loading={removing}
+                    onConfirm={handleRemoveMember}
+                    onCancel={() => setRemoveMemberId(null)}
                 />
             )}
 
