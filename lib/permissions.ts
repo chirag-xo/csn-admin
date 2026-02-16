@@ -34,22 +34,28 @@ export function canAssignRole(
 
     switch (assigner.role) {
         case 'SUPER_ADMIN':
-            // Super Admin can assign STATE_DIRECTOR, CITY_DIRECTOR, PRESIDENT
-            return ['STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT'].includes(targetRole);
+            // Super Admin can assign SUPER_ADMIN, STATE_DIRECTOR, CITY_DIRECTOR, PRESIDENT, VICE_PRESIDENT, SECRETARY, and revert to USER
+            return ['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'USER'].includes(targetRole);
 
         case 'STATE_DIRECTOR':
-            // Can assign City Director only inside his state
-            if (targetRole === 'CITY_DIRECTOR') {
+            // Can assign City Director, Chapter roles, or revert to USER only inside his state
+            if (['CITY_DIRECTOR', 'PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'USER'].includes(targetRole)) {
                 return targetStateId === assigner.stateId;
             }
             return false;
 
         case 'CITY_DIRECTOR':
-            // Can assign President only inside his city
-            if (targetRole === 'PRESIDENT') {
+            // Can assign President, Chapter roles, or revert to USER only inside his city
+            if (['PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'USER'].includes(targetRole)) {
                 return targetCityId === assigner.cityId;
             }
             return false;
+
+        case 'PRESIDENT':
+            // President can assign VP, Secretary, or revert to User/Member
+            // We need to verify they are in the same chapter, but `targetUser` usually doesn't have chapterId easily accessible here without a DB join.
+            // For now, we assume the API route calling this will verify the chapter membership constraint.
+            return ['VICE_PRESIDENT', 'SECRETARY', 'USER'].includes(targetRole);
 
         default:
             return false;

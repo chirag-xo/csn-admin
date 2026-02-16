@@ -70,6 +70,7 @@ export async function GET(
                     name: user ? `${user.firstName} ${user.lastName}`.trim() : 'Unknown User',
                     email: user?.email || '',
                 },
+                role: member.role,
                 joinedAt: member.joinedAt,
             };
         });

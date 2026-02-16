@@ -10,7 +10,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 // Role assignment validation
 export const roleAssignmentSchema = z.object({
-    role: z.enum(['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT', 'USER']),
+    role: z.enum(['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'USER']),
     stateId: z.string().uuid().optional(),
     cityId: z.string().uuid().optional(),
 });
@@ -38,7 +38,7 @@ export const userFiltersSchema = z.object({
     page: z.string().transform(Number).pipe(z.number().int().positive()).default('1'),
     limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).default('20'),
     search: z.string().optional(),
-    role: z.enum(['USER', 'PRESIDENT', 'CITY_DIRECTOR', 'STATE_DIRECTOR', 'SUPER_ADMIN']).optional(),
+    role: z.enum(['USER', 'PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'CITY_DIRECTOR', 'STATE_DIRECTOR', 'SUPER_ADMIN']).optional(),
     stateId: z.string().uuid().optional(),
     cityId: z.string().uuid().optional(),
 });

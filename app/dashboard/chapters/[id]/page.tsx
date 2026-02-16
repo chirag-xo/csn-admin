@@ -30,6 +30,7 @@ interface Member {
         email?: string;
     };
     joinedAt: string;
+    role: string;
 }
 
 interface JoinRequest {
@@ -73,6 +74,12 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
     const [addingMember, setAddingMember] = useState(false);
+
+    // Manage Role State
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [roleMember, setRoleMember] = useState<Member | null>(null);
+    const [newRole, setNewRole] = useState('');
+    const [updatingRole, setUpdatingRole] = useState(false);
 
     // Initial Fetch
     useEffect(() => {
@@ -261,7 +268,40 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
     const canManageChapter = () => {
         if (!session) return false;
         // Super Admin, State Director, City Director
-        return ['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR'].includes(session.role);
+        // Super Admin, State Director, City Director
+        return ['SUPER_ADMIN', 'STATE_DIRECTOR', 'CITY_DIRECTOR', 'PRESIDENT'].includes(session.role);
+    };
+
+    const isActiveUser = (memberRole: string) => {
+        return ['VICE_PRESIDENT', 'SECRETARY'].includes(memberRole);
+    }
+
+    const handleUpdateRole = async () => {
+        if (!roleMember || !newRole) return;
+        setUpdatingRole(true);
+        try {
+            const res = await fetch(`/api/chapters/${id}/assign-role`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: roleMember.user.id, role: newRole }),
+            });
+
+            if (res.ok) {
+                setShowRoleModal(false);
+                setRoleMember(null);
+                setNewRole('');
+                fetchMembers();
+                fetchChapter(); // Refresh counts/president if changed
+                alert('Role updated successfully');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to update role');
+            }
+        } catch (error) {
+            alert('Network error');
+        } finally {
+            setUpdatingRole(false);
+        }
     };
 
     if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -410,7 +450,9 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                     <tr>
                                         <th>Name</th>
                                         <th>Email</th>
+                                        <th>Role</th>
                                         <th>Joined At</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -423,7 +465,30 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                             <tr key={member.id}>
                                                 <td className="font-medium">{member.user.name}</td>
                                                 <td>{member.user.email}</td>
+                                                <td>
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${member.role === 'PRESIDENT' ? 'bg-purple-100 text-purple-800' :
+                                                            member.role === 'VICE_PRESIDENT' ? 'bg-blue-100 text-blue-800' :
+                                                                member.role === 'SECRETARY' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                        {member.role === 'MEMBER' ? 'Member' : member.role.replace('_', ' ')}
+                                                    </span>
+                                                </td>
                                                 <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
+                                                <td>
+                                                    {canManageChapter() && member.role !== 'PRESIDENT' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setRoleMember(member);
+                                                                setNewRole(member.role === 'MEMBER' ? 'VICE_PRESIDENT' : member.role);
+                                                                setShowRoleModal(true);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                        >
+                                                            Manage Role
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -568,6 +633,76 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                     onConfirm={handleDelete}
                     onCancel={() => setShowDeleteConfirm(false)}
                 />
+            )}
+
+            {/* Manage Role Modal */}
+            {showRoleModal && roleMember && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4">Manage Role</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Assigning role for <strong>{roleMember.user.name}</strong>
+                        </p>
+
+                        <div className="space-y-3">
+                            <label className="flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="VICE_PRESIDENT"
+                                    checked={newRole === 'VICE_PRESIDENT'}
+                                    onChange={(e) => setNewRole(e.target.value)}
+                                    className="radio radio-primary radio-sm"
+                                />
+                                <span className="font-medium">Vice President</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="SECRETARY"
+                                    checked={newRole === 'SECRETARY'}
+                                    onChange={(e) => setNewRole(e.target.value)}
+                                    className="radio radio-primary radio-sm"
+                                />
+                                <span className="font-medium">Secretary</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="USER"
+                                    checked={newRole === 'USER'}
+                                    onChange={(e) => setNewRole(e.target.value)}
+                                    className="radio radio-primary radio-sm"
+                                />
+                                <span className="font-medium">Member (User)</span>
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 justify-end mt-6">
+                            <button
+                                onClick={() => {
+                                    setShowRoleModal(false);
+                                    setRoleMember(null);
+                                }}
+                                className="btn btn-secondary btn-sm"
+                                disabled={updatingRole}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateRole}
+                                className="btn btn-primary btn-sm"
+                                disabled={!newRole || updatingRole}
+                            >
+                                {updatingRole ? 'Saving...' : 'Save Role'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

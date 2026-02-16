@@ -119,7 +119,7 @@ export async function POST(
             });
 
             // 4. Update Chapter
-            return await tx.chapter.update({
+            const updated = await tx.chapter.update({
                 where: { id: chapterId },
                 data: { presidentId: userId },
                 include: {
@@ -138,7 +138,10 @@ export async function POST(
                     },
                 },
             });
+            return updated;
         });
+
+        console.log('President assigned, fetching details...');
 
         // Fetch president details from unified DB
         const president = await db.user.findUnique({
@@ -156,8 +159,8 @@ export async function POST(
             message: 'President assigned successfully',
         });
     } catch (error: any) {
-        console.error('Assign president error:', error);
-
+        console.error('Assign president error details:', error);
+        console.error('Assign president error stack:', error.stack);
         if (error.message === 'Unauthorized') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
