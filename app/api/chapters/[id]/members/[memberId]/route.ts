@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
-import { canManageChapter } from '@/lib/permissions';
+import { requireAuth } from '@/lib/session';
 
 export async function DELETE(
     request: NextRequest,
