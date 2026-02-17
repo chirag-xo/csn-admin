@@ -47,6 +47,10 @@ export async function DELETE(
             where: { id: memberToRemove.userId }
         });
 
+        if (!userToRemove) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
         // Prevent removing the President without reassigning first?
         // Logic: If they are the current president of the chapter, we block removal.
         if (memberToRemove.userId === chapter.presidentId) {
