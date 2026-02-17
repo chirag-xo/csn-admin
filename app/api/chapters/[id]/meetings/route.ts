@@ -59,8 +59,10 @@ export async function POST(
         const body = await request.json();
         const { title, description, date, time, venue, entryFee, isRecurring, recurrencePattern, sendInvites, isPublic } = body;
 
-        // Combine date and time
-        const eventDate = new Date(`${date}T${time}:00`);
+        // Combine date and time - parse components to avoid timezone issues
+        const [year, month, day] = date.split('-').map(Number);
+        const [hours, minutes] = time.split(':').map(Number);
+        const eventDate = new Date(year, month - 1, day, hours, minutes, 0);
 
         // 3. Create Event
         const event = await db.event.create({
