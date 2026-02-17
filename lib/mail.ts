@@ -7,17 +7,18 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT || '587'),
         secure: false, // true for 465, false for other ports (587 uses STARTTLS)
-        requireTLS: true, // Force TLS for port 587
         auth: {
             user: process.env.SMTP_USER || process.env.EMAIL_USER,
             pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
         },
         tls: {
-            // Do not fail on invalid certs (useful for some production environments)
-            rejectUnauthorized: false,
-            // Minimum TLS version
-            minVersion: 'TLSv1.2'
-        }
+            ciphers: 'SSLv3', // Help with some handshake issues
+            rejectUnauthorized: false
+        },
+        // Increase timeouts to prevent 'Greeting never received' errors
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,   // 10 seconds
+        socketTimeout: 10000      // 10 seconds
     });
 
     // Debug logging for production troubleshooting
