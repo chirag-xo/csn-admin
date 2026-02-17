@@ -6,11 +6,18 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false, // true for 465, false for other ports
+        secure: false, // true for 465, false for other ports (587 uses STARTTLS)
+        requireTLS: true, // Force TLS for port 587
         auth: {
             user: process.env.SMTP_USER || process.env.EMAIL_USER,
             pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
         },
+        tls: {
+            // Do not fail on invalid certs (useful for some production environments)
+            rejectUnauthorized: false,
+            // Minimum TLS version
+            minVersion: 'TLSv1.2'
+        }
     });
 
     // Debug logging for production troubleshooting
