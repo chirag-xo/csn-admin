@@ -5,14 +5,13 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
     // Create transporter INSIDE function to ensure env vars are loaded in serverless
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false, // true for 465, false for other ports (587 uses STARTTLS)
+        port: 465, // Force port 465 as requested
+        secure: true, // true for 465
         auth: {
             user: process.env.SMTP_USER || process.env.EMAIL_USER,
             pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
         },
         tls: {
-            ciphers: 'SSLv3', // Help with some handshake issues
             rejectUnauthorized: false
         },
         // Increase timeouts to prevent 'Greeting never received' errors
