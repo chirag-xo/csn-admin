@@ -129,16 +129,23 @@ export async function POST(
         if (sendInvites) {
             const emails = members.map(m => m.user.email);
 
-            // Send asynchronously to not block response
-            sendMeetingInvite(emails, {
-                title,
-                description,
-                date: eventDate,
-                time,
-                venue,
-                entryFee,
-                link: `${process.env.NEXT_PUBLIC_APP_URL}/events/${event.id}` // Public link
-            }).catch(console.error);
+            // Send synchronously to ensure completion in serverless environment
+            try {
+                console.log('[API] Awaiting email sending...');
+                await sendMeetingInvite(emails, {
+                    title,
+                    description,
+                    date: eventDate,
+                    time,
+                    venue,
+                    entryFee,
+                    link: `${process.env.NEXT_PUBLIC_APP_URL}/events/${event.id}` // Public link
+                });
+                console.log('[API] Email sending completed');
+            } catch (emailError) {
+                console.error('[API] Failed to send emails:', emailError);
+                // Continue execution - don't fail the request just because email failed
+            }
         }
 
         return NextResponse.json({ message: 'Meeting created successfully', event });

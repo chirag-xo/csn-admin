@@ -2,7 +2,6 @@
 import nodemailer from 'nodemailer';
 
 export async function sendMeetingInvite(to: string[], meetingDetails: any) {
-    // Create transporter INSIDE function to ensure env vars are loaded in serverless
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: 465, // Force port 465 as requested
@@ -10,9 +9,6 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
         auth: {
             user: process.env.SMTP_USER || process.env.EMAIL_USER,
             pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
-        },
-        tls: {
-            rejectUnauthorized: false
         },
         // Increase timeouts to prevent 'Greeting never received' errors
         connectionTimeout: 10000, // 10 seconds
@@ -58,7 +54,7 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
     };
 
     try {
-        console.log('[EMAIL] Attempting to send email...');
+        console.log('[EMAIL] Sending email...');
         const info = await transporter.sendMail(mailOptions);
         console.log(`[EMAIL SENT] Subject: "${title}" | Recipients: ${to.length} | MessageID: ${info.messageId}`);
         console.log(`[EMAIL RECIPIENTS]:`, to);
