@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Calendar, Clock, MapPin, Users, Trash2 } from 'lucide-react';
 
 interface Chapter {
     id: string;
@@ -571,10 +572,7 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                                                 className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
                                                                 title="Remove Member"
                                                             >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                                                                    <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                                                                </svg>
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </>
                                                     )}
@@ -663,10 +661,10 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                 <div key={m.id} className="border p-4 rounded-lg flex justify-between items-center bg-white shadow-sm">
                                     <div>
                                         <div className="font-bold text-lg">{m.title}</div>
-                                        <div className="text-sm text-gray-600 flex gap-4 mt-1">
-                                            <span>📅 {new Date(m.date).toLocaleDateString()}</span>
-                                            <span>⏰ {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            <span>📍 {m.venue}</span>
+                                        <div className="text-sm text-gray-600 flex gap-4 mt-1 items-center">
+                                            <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(m.date).toLocaleDateString()}</span>
+                                            <span className="flex items-center gap-1"><Clock size={14} /> {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="flex items-center gap-1"><MapPin size={14} /> {m.location}</span>
                                         </div>
                                         <div className="text-sm mt-2 text-gray-500">{m.description}</div>
                                         {m.entryFee > 0 && (
@@ -676,7 +674,10 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                         )}
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-2xl font-bold">{m._count?.EventAttendee || 0}</div>
+                                        <div className="text-2xl font-bold flex items-center justify-end gap-1">
+                                            {m._count?.EventAttendee || 0}
+                                            <Users size={16} className="text-gray-400" />
+                                        </div>
                                         <div className="text-xs text-gray-500">Attendees</div>
                                         <Link href={`/events/${m.id}`} target="_blank" className="text-blue-600 text-sm hover:underline block mt-2">
                                             View Page
