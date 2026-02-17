@@ -663,7 +663,7 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                         <div className="font-bold text-lg">{m.title}</div>
                                         <div className="text-sm text-gray-600 flex gap-4 mt-1 items-center">
                                             <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(m.date).toLocaleDateString()}</span>
-                                            <span className="flex items-center gap-1"><Clock size={14} /> {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="flex items-center gap-1"><Clock size={14} /> {new Date(m.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                                             <span className="flex items-center gap-1"><MapPin size={14} /> {m.location}</span>
                                         </div>
                                         <div className="text-sm mt-2 text-gray-500">{m.description}</div>
