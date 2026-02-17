@@ -62,16 +62,26 @@ export async function DELETE(
 
             // Clean up User Role if necessary
             // If they were VP or Secretary, revert to USER
-            if (userToRemove && (userToRemove.role === 'VICE_PRESIDENT' || userToRemove.role === 'SECRETARY')) {
-                await tx.user.update({
-                    where: { id: memberToRemove.userId },
-                    data: { role: 'USER' }
-                });
-            }
+            // ALSO: We MUST clear the chapterId so they can join another chapter (or rejoin this one)
+            await tx.user.update({
+                where: { id: memberToRemove.userId },
+                data: {
+                    role: (userToRemove.role === 'VICE_PRESIDENT' || userToRemove.role === 'SECRETARY') ? 'USER' : undefined,
+                    chapterId: null
+                }
+            });
 
-            // Clean up User's location links if strictly tied to chapter?
-            // Usually we keep state/city unless we want to reset them. P
-            // For now, kept as is, just role revert.
+            // Sync: Remove from upcoming meetings
+            // We find all upcoming events for this chapter and delete the attendee record
+            await tx.eventAttendee.deleteMany({
+                where: {
+                    userId: memberToRemove.userId,
+                    Event: {
+                        chapterId: chapterId,
+                        date: { gte: new Date() }
+                    }
+                }
+            });
         });
 
         return NextResponse.json({ message: 'Member removed successfully' });

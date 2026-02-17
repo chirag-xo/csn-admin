@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Chapter {
     id: string;
@@ -83,6 +83,35 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
     const [newRole, setNewRole] = useState('');
     const [updatingRole, setUpdatingRole] = useState(false);
 
+    // Meetings State
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab') === 'meetings' ? 'meetings' : 'members';
+    const [activeTab, setActiveTab] = useState<'members' | 'requests' | 'meetings'>(initialTab as any);
+
+    // Update activeTab if searchParams changes (e.g. navigation)
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'meetings' || tab === 'members' || tab === 'requests') {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
+
+    const [meetings, setMeetings] = useState<any[]>([]);
+    const [meetingsLoading, setMeetingsLoading] = useState(false);
+    const [showMeetingModal, setShowMeetingModal] = useState(false);
+    const [creatingMeeting, setCreatingMeeting] = useState(false);
+    const [meetingForm, setMeetingForm] = useState({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        venue: '',
+        entryFee: '',
+        isRecurring: false,
+        recurrencePattern: 'WEEKLY',
+        sendInvites: true
+    });
+
     // Initial Fetch
     useEffect(() => {
         fetchChapter();
@@ -95,12 +124,32 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
         }
     }, [chapter, membersPage]);
 
-    // Fetch Requests if allowed
+    // Fetch requests and meetings when tab changes
     useEffect(() => {
-        if (chapter && canViewRequests()) {
-            fetchRequests();
+        if (chapter) {
+            if (activeTab === 'requests' && canViewRequests()) {
+                fetchRequests();
+            }
+            if (activeTab === 'meetings') {
+                fetchMeetings();
+            }
         }
-    }, [chapter]);
+    }, [chapter, activeTab]);
+
+    const fetchMeetings = async () => {
+        setMeetingsLoading(true);
+        try {
+            const res = await fetch(`/api/chapters/${id}/meetings`);
+            if (res.ok) {
+                const data = await res.json();
+                setMeetings(data);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setMeetingsLoading(false);
+        }
+    };
 
     const fetchChapter = async () => {
         setLoading(true);
@@ -170,6 +219,9 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
             alert('Network error');
         }
     };
+
+    const handleApproveRequest = (requestId: string) => handleRequestAction(requestId, 'APPROVE');
+    const handleRejectRequest = (requestId: string) => handleRequestAction(requestId, 'REJECT');
 
     const handleAssignPresident = async () => {
         if (!selectedMember) return;
@@ -328,6 +380,41 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
         } finally {
             setRemoving(false);
         }
+    }
+    const handleCreateMeeting = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreatingMeeting(true);
+        try {
+            const res = await fetch(`/api/chapters/${id}/meetings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(meetingForm),
+            });
+
+            if (res.ok) {
+                alert('Meeting scheduled successfully!');
+                setShowMeetingModal(false);
+                setMeetingForm({
+                    title: '',
+                    description: '',
+                    date: '',
+                    time: '',
+                    venue: '',
+                    entryFee: '',
+                    isRecurring: false,
+                    recurrencePattern: 'WEEKLY',
+                    sendInvites: true
+                });
+                fetchMeetings();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to schedule meeting');
+            }
+        } catch (error) {
+            alert('Network error');
+        } finally {
+            setCreatingMeeting(false);
+        }
     };
 
     if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -388,178 +475,224 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                 </div>
             </div>
 
-            {/* Pending Requests Section - Always try to render, let API handle error/empty */}
-            <div className="card p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    Pending Join Requests
-                    {pendingRequestsCount > 0 && (
-                        <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
-                            {pendingRequestsCount}
-                        </span>
-                    )}
-                </h2>
+            {/* TABS NAVIGATION */}
+            <div className="flex border-b border-gray-200 mb-6">
+                <button
+                    className={`px-4 py-2 border-b-2 font-medium text-sm focus:outline-none ${activeTab === 'members' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    onClick={() => setActiveTab('members')}
+                >
+                    Members
+                </button>
+                <button
+                    className={`px-4 py-2 border-b-2 font-medium text-sm focus:outline-none flex items-center ${activeTab === 'requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    onClick={() => setActiveTab('requests')}
+                >
+                    Join Requests
+                    {pendingRequestsCount > 0 && <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">{pendingRequestsCount}</span>}
+                </button>
+                <button
+                    className={`px-4 py-2 border-b-2 font-medium text-sm focus:outline-none ${activeTab === 'meetings' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    onClick={() => setActiveTab('meetings')}
+                >
+                    Meetings
+                </button>
+            </div>
 
-                {requestsLoading ? (
-                    <div className="text-center py-4 text-gray-500">Loading requests...</div>
-                ) : requests.length === 0 ? (
-                    <div className="text-gray-500 text-sm">No pending requests</div>
-                ) : (
+            {/* MEMBERS TAB */}
+            {activeTab === 'members' && (
+                <div className="card p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold">Members</h2>
+                        <div className="flex gap-2">
+                            {canManageChapter() && (
+                                <button
+                                    onClick={() => setShowAssignModal(true)}
+                                    className="btn btn-neutral btn-sm"
+                                >
+                                    Assign/Change President
+                                </button>
+                            )}
+                            {canManageChapter() && (
+                                <button
+                                    onClick={() => setShowAddMemberModal(true)}
+                                    className="btn btn-primary btn-sm"
+                                >
+                                    + Add Member
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="overflow-x-auto">
-                        <table className="table">
+                        <table className="table table-zebra w-full">
                             <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
-                                    <th>Requested At</th>
+                                    <th>Role</th>
+                                    <th>Joined At</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {requests.map(req => (
-                                    <tr key={req.id}>
-                                        <td className="font-medium">{req.user.name}</td>
-                                        <td>{req.user.email}</td>
-                                        <td>{new Date(req.createdAt).toLocaleDateString()}</td>
-                                        <td className="flex gap-2">
-                                            <button
-                                                onClick={() => handleRequestAction(req.id, 'APPROVE')}
-                                                className="btn btn-sm text-green-600 bg-green-50 hover:bg-green-100 border-none"
-                                            >
-                                                Approve
-                                            </button>
-                                            <button
-                                                onClick={() => handleRequestAction(req.id, 'REJECT')}
-                                                className="btn text-red-600 bg-red-50 hover:bg-red-100 border-none btn-sm"
-                                            >
-                                                Reject
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {membersLoading ? (
+                                    <tr><td colSpan={5} className="text-center p-4">Loading members...</td></tr>
+                                ) : members.length === 0 ? (
+                                    <tr><td colSpan={5} className="text-center p-4">No members found.</td></tr>
+                                ) : (
+                                    members.map((member) => (
+                                        <tr key={member.id}>
+                                            <td>
+                                                <div className="font-bold">{member.user.name}</div>
+                                            </td>
+                                            <td>{member.user.email}</td>
+                                            <td>
+                                                <span className={`badge ${member.role === 'PRESIDENT' ? 'badge-primary' : member.role === 'VICE_PRESIDENT' ? 'badge-secondary' : 'badge-ghost'}`}>
+                                                    {member.role === 'MEMBER' ? 'Member' : member.role.replace('_', ' ')}
+                                                </span>
+                                            </td>
+                                            <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
+                                            <td>
+                                                <div className="flex items-center gap-2">
+                                                    {canManageChapter() && member.role !== 'PRESIDENT' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setRoleMember(member);
+                                                                    setNewRole(member.role === 'MEMBER' ? 'VICE_PRESIDENT' : member.role);
+                                                                    setShowRoleModal(true);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                            >
+                                                                Manage Role
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setRemoveMemberId(member.id)}
+                                                                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                                                                title="Remove Member"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                                                                    <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                                                                </svg>
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
-                )}
-            </div>
-
-            {/* Members Section */}
-            <div className="card p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold">Members</h2>
-                    <div className="flex gap-2">
-                        {canManageChapter() && (
-                            <button
-                                onClick={() => setShowAddMemberModal(true)}
-                                className="btn btn-primary btn-sm"
-                            >
-                                + Add Member
-                            </button>
-                        )}
-                        {canManageChapter() && (
-                            <button
-                                onClick={() => setShowAssignModal(true)}
-                                className="btn btn-secondary btn-sm"
-                            >
-                                Assign/Change President
-                            </button>
-                        )}
-                    </div>
+                    {/* Pagination - Simplified for now */}
                 </div>
+            )}
 
-                {membersLoading ? (
-                    <div className="text-center py-8">Loading members...</div>
-                ) : (
-                    <>
+            {/* REQUESTS TAB */}
+            {activeTab === 'requests' && (
+                <div className="card p-6">
+                    <h2 className="text-xl font-bold mb-4">Pending Join Requests</h2>
+                    {requestsLoading ? (
+                        <div className="text-center p-4">Loading requests...</div>
+                    ) : requests.length === 0 ? (
+                        <div className="text-center p-4 text-gray-500">No pending requests</div>
+                    ) : (
                         <div className="overflow-x-auto">
-                            <table className="table">
+                            <table className="table w-full">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
                                         <th>Email</th>
-                                        <th>Role</th>
-                                        <th>Joined At</th>
+                                        <th>Requested At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {members.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} className="text-center py-8 text-gray-500">No members found</td>
+                                    {requests.map((req) => (
+                                        <tr key={req.id}>
+                                            <td>{req.user.name}</td>
+                                            <td>{req.user.email}</td>
+                                            <td>{new Date(req.createdAt).toLocaleDateString()}</td>
+                                            <td className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleApproveRequest(req.id)}
+                                                    className="btn btn-success btn-xs"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRejectRequest(req.id)}
+                                                    className="btn btn-error btn-xs"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </td>
                                         </tr>
-                                    ) : (
-                                        members.map(member => (
-                                            <tr key={member.id}>
-                                                <td className="font-medium">{member.user.name}</td>
-                                                <td>{member.user.email}</td>
-                                                <td>
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${member.role === 'PRESIDENT' ? 'bg-purple-100 text-purple-800' :
-                                                        member.role === 'VICE_PRESIDENT' ? 'bg-blue-100 text-blue-800' :
-                                                            member.role === 'SECRETARY' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                        {member.role === 'MEMBER' ? 'Member' : member.role.replace('_', ' ')}
-                                                    </span>
-                                                </td>
-                                                <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
-                                                <td>
-                                                    <div className="flex items-center gap-2">
-                                                        {canManageChapter() && member.role !== 'PRESIDENT' && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setRoleMember(member);
-                                                                        setNewRole(member.role === 'MEMBER' ? 'VICE_PRESIDENT' : member.role);
-                                                                        setShowRoleModal(true);
-                                                                    }}
-                                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                                                >
-                                                                    Manage Role
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setRemoveMemberId(member.id)}
-                                                                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                                                                    title="Remove Member"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                                                                        <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                                                                    </svg>
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
+                    )}
+                </div>
+            )}
 
-                        {membersTotal > 1 && (
-                            <div className="flex justify-center gap-2 mt-4">
-                                <button
-                                    onClick={() => setMembersPage(p => Math.max(1, p - 1))}
-                                    disabled={membersPage === 1}
-                                    className="btn btn-sm btn-secondary"
-                                >
-                                    Previous
-                                </button>
-                                <span className="text-sm flex items-center">
-                                    Page {membersPage} of {membersTotal}
-                                </span>
-                                <button
-                                    onClick={() => setMembersPage(p => Math.min(membersTotal, p + 1))}
-                                    disabled={membersPage === membersTotal}
-                                    className="btn btn-sm btn-secondary"
-                                >
-                                    Next
-                                </button>
-                            </div>
+            {/* MEETINGS TAB */}
+            {activeTab === 'meetings' && (
+                <div className="card p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold">Chapter Meetings</h2>
+                        {canManageChapter() && (
+                            <button
+                                onClick={() => setShowMeetingModal(true)}
+                                className="btn btn-primary btn-sm"
+                            >
+                                + Create Meeting
+                            </button>
                         )}
-                    </>
-                )}
-            </div>
+                    </div>
+
+                    {meetingsLoading ? (
+                        <div className="text-center p-4">Loading meetings...</div>
+                    ) : meetings.length === 0 ? (
+                        <div className="text-center p-4 text-gray-500">No meetings scheduled.</div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {meetings.map(m => (
+                                <div key={m.id} className="border p-4 rounded-lg flex justify-between items-center bg-white shadow-sm">
+                                    <div>
+                                        <div className="font-bold text-lg">{m.title}</div>
+                                        <div className="text-sm text-gray-600 flex gap-4 mt-1">
+                                            <span>📅 {new Date(m.date).toLocaleDateString()}</span>
+                                            <span>⏰ {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span>📍 {m.venue}</span>
+                                        </div>
+                                        <div className="text-sm mt-2 text-gray-500">{m.description}</div>
+                                        {m.entryFee > 0 && (
+                                            <div className="mt-1 text-sm font-medium text-green-600">
+                                                Entry Fee: ₹{m.entryFee}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-bold">{m._count?.EventAttendee || 0}</div>
+                                        <div className="text-xs text-gray-500">Attendees</div>
+                                        <Link href={`/events/${m.id}`} target="_blank" className="text-blue-600 text-sm hover:underline block mt-2">
+                                            View Page
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+            {/* Pending Requests Section - Always try to render, let API handle error/empty */}
+            {/* This section is now handled by the 'requests' tab */}
+
+            {/* Members Section */}
+            {/* This section is now handled by the 'members' tab */}
 
             {/* Assign President Modal */}
             {showAssignModal && (
@@ -724,8 +857,8 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                                 <input
                                     type="radio"
                                     name="role"
-                                    value="USER"
-                                    checked={newRole === 'USER'}
+                                    value="MEMBER" // Changed from USER to MEMBER as per interface
+                                    checked={newRole === 'MEMBER'}
                                     onChange={(e) => setNewRole(e.target.value)}
                                     className="radio radio-primary radio-sm"
                                 />
@@ -733,25 +866,147 @@ export default function ChapterDetailsPage({ params }: { params: Promise<{ id: s
                             </label>
                         </div>
 
-                        <div className="flex gap-3 justify-end mt-6">
+                        <div className="flex gap-2 justify-end mt-6">
                             <button
                                 onClick={() => {
                                     setShowRoleModal(false);
                                     setRoleMember(null);
                                 }}
-                                className="btn btn-secondary btn-sm"
+                                className="btn btn-ghost"
                                 disabled={updatingRole}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleUpdateRole}
-                                className="btn btn-primary btn-sm"
+                                className="btn btn-primary"
                                 disabled={!newRole || updatingRole}
                             >
                                 {updatingRole ? 'Saving...' : 'Save Role'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Meeting Modal */}
+            {showMeetingModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto pt-10 pb-10">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-2xl my-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Create Chapter Meeting</h3>
+                            <button onClick={() => setShowMeetingModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                        </div>
+
+                        <form onSubmit={handleCreateMeeting} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2 form-control">
+                                <label className="label">
+                                    <span className="label-text">Title</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="input input-bordered w-full"
+                                    value={meetingForm.title}
+                                    onChange={e => setMeetingForm({ ...meetingForm, title: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 form-control">
+                                <label className="label">
+                                    <span className="label-text">Description</span>
+                                </label>
+                                <textarea
+                                    required
+                                    className="textarea textarea-bordered w-full"
+                                    rows={3}
+                                    value={meetingForm.description}
+                                    onChange={e => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Date</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="input input-bordered w-full"
+                                    value={meetingForm.date}
+                                    onChange={e => setMeetingForm({ ...meetingForm, date: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Time</span>
+                                </label>
+                                <input
+                                    type="time"
+                                    required
+                                    className="input input-bordered w-full"
+                                    value={meetingForm.time}
+                                    onChange={e => setMeetingForm({ ...meetingForm, time: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 form-control">
+                                <label className="label">
+                                    <span className="label-text">Venue</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="input input-bordered w-full"
+                                    value={meetingForm.venue}
+                                    onChange={e => setMeetingForm({ ...meetingForm, venue: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Entry Fee (₹)</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    className="input input-bordered w-full"
+                                    value={meetingForm.entryFee}
+                                    onChange={e => setMeetingForm({ ...meetingForm, entryFee: e.target.value })}
+                                    placeholder="0 for free"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 flex items-center gap-4 mt-2">
+                                <label className="cursor-pointer label">
+                                    <span className="label-text mr-2">Recurring Meeting?</span>
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox"
+                                        checked={meetingForm.isRecurring}
+                                        onChange={e => setMeetingForm({ ...meetingForm, isRecurring: e.target.checked })}
+                                    />
+                                </label>
+
+                                <label className="cursor-pointer label">
+                                    <span className="label-text mr-2 font-semibold text-blue-700">Send Email Invites?</span>
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-primary"
+                                        checked={meetingForm.sendInvites}
+                                        onChange={e => setMeetingForm({ ...meetingForm, sendInvites: e.target.checked })}
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="md:col-span-2 modal-action">
+                                <button type="button" onClick={() => setShowMeetingModal(false)} className="btn">Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={creatingMeeting}>
+                                    {creatingMeeting ? 'Creating...' : 'Create & Invite'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

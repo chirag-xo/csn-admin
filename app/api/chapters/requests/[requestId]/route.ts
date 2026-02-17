@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import { sendMeetingInvite } from '@/lib/mail';
 import { z } from 'zod';
 
 const actionSchema = z.object({
@@ -81,6 +82,57 @@ export async function POST(
                             userId: joinRequest.userId,
                         },
                     });
+
+                    // Sync with upcoming events
+                    const upcomingEvents = await tx.event.findMany({
+                        where: {
+                            chapterId: chapter.id,
+                            date: { gte: new Date() }
+                        }
+                    });
+
+                    if (upcomingEvents.length > 0) {
+                        const attendeesData = upcomingEvents.map(event => ({
+                            id: crypto.randomUUID(),
+                            eventId: event.id,
+                            userId: joinRequest.userId,
+                            status: 'INVITED',
+                            paymentStatus: 'PENDING',
+                            role: 'ATTENDEE'
+                        }));
+
+                        await tx.eventAttendee.createMany({
+                            data: attendeesData,
+                            skipDuplicates: true
+                        });
+
+                        // Send invites asynchronously
+                        // Fetch the user to get email
+                        const approvedUser = await tx.user.findUnique({
+                            where: { id: joinRequest.userId },
+                            select: { email: true }
+                        });
+
+                        if (approvedUser && approvedUser.email) {
+                            for (const event of upcomingEvents) {
+                                const eventTime = new Date(event.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+                                const meetingDetails = {
+                                    title: event.title,
+                                    description: event.description || '',
+                                    date: event.date,
+                                    time: eventTime,
+                                    venue: event.location || 'Online',
+                                    entryFee: event.entryFee,
+                                    link: `${process.env.NEXT_PUBLIC_APP_URL}/events/${event.id}`
+                                };
+
+                                sendMeetingInvite([approvedUser.email], meetingDetails).catch(err =>
+                                    console.error(`Failed to send invite to ${approvedUser.email} for event ${event.id}`, err)
+                                );
+                            }
+                        }
+                    }
                 }
             });
         } else {

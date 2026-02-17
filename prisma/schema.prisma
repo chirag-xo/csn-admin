@@ -74,6 +74,7 @@ model ChapterMember {
   joinedAt  DateTime @default(now()) @map("joined_at")
   role      String   @default("MEMBER")
   chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([chapterId, userId])
   @@index([chapterId])
@@ -128,6 +129,7 @@ model User {
   UserPrivacy                       UserPrivacy?
   UserVerification_userIdToUser     UserVerification[] @relation("UserVerification_userIdToUser")
   UserVerification_verifiedByToUser UserVerification[] @relation("UserVerification_verifiedByToUser")
+  ChapterMember                     ChapterMember[]
 
   @@index([email])
   @@index([chapterId])
@@ -193,7 +195,8 @@ model Event {
   date           DateTime
   endDate        DateTime?
   isRecurring    Boolean         @default(false)
-  recurrenceType String?
+  recurrenceType    String?
+  recurrencePattern String?
   isPublic       Boolean         @default(true)
   chapterId      String?
   creatorId      String
@@ -213,19 +216,27 @@ model Event {
 }
 
 model EventAttendee {
-  id        String   @id
-  eventId   String
-  userId    String
-  status    String   @default("GOING")
+  id        String   @id @default(uuid())
+  eventId   String   @map("event_id")
+  userId    String   @map("user_id")
+  status    String   @default("GOING") // INVITED, GOING, NOT_GOING, CHECKED_IN
   role      String   @default("ATTENDEE")
-  createdAt DateTime @default(now())
+  
+  // Payment tracking
+  paymentStatus String   @default("PENDING") // PENDING, PAID, FAILED, FREE
+  paymentId     String?  @map("payment_id")
+  amountPaid    Int?     @map("amount_paid")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
   Event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  User      User     @relation(fields: [userId], references: [id])
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@index([eventId])
   @@index([status])
   @@index([userId])
+  @@map("event_attendees")
 }
 
 model EventPhoto {
