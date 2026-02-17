@@ -59,10 +59,29 @@ export async function POST(
         const body = await request.json();
         const { title, description, date, time, venue, entryFee, isRecurring, recurrencePattern, sendInvites, isPublic } = body;
 
-        // Combine date and time - parse components to avoid timezone issues
+        // Combine date and time - handle timezone properly for production (UTC) and localhost (IST)
         const [year, month, day] = date.split('-').map(Number);
         const [hours, minutes] = time.split(':').map(Number);
-        const eventDate = new Date(year, month - 1, day, hours, minutes, 0);
+
+        // Create date in UTC first
+        const eventDateUTC = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+
+        // Adjust from IST (UTC+5:30) to UTC
+        // User enters IST time, we need to store UTC equivalent
+        const ISTOffsetMinutes = 5 * 60 + 30; // 330 minutes
+        eventDateUTC.setMinutes(eventDateUTC.getMinutes() - ISTOffsetMinutes);
+
+        const eventDate = eventDateUTC;
+
+        // Debug logging for production troubleshooting
+        console.log('[DATETIME DEBUG]', {
+            inputDate: date,
+            inputTime: time,
+            parsedComponents: { year, month, day, hours, minutes },
+            createdUTC: eventDateUTC.toISOString(),
+            serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            nodeEnv: process.env.NODE_ENV
+        });
 
         // 3. Create Event
         const event = await db.event.create({

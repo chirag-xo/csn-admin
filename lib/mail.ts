@@ -1,19 +1,30 @@
 
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER || process.env.EMAIL_USER,
-        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
-    },
-});
-
 export async function sendMeetingInvite(to: string[], meetingDetails: any) {
+    // Create transporter INSIDE function to ensure env vars are loaded in serverless
+    const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: process.env.SMTP_USER || process.env.EMAIL_USER,
+            pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
+        },
+    });
+
+    // Debug logging for production troubleshooting
+    console.log('[EMAIL DEBUG] ENV CHECK:', {
+        SMTP_HOST: process.env.SMTP_HOST,
+        SMTP_USER: process.env.SMTP_USER,
+        SMTP_FROM: process.env.SMTP_FROM,
+        hasPassword: !!process.env.SMTP_PASS || !!process.env.EMAIL_PASS,
+        recipientCount: to.length,
+        NODE_ENV: process.env.NODE_ENV
+    });
+
     if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
-        console.warn('Email credentials not found. Skipping email sending.');
+        console.warn('[EMAIL WARN] Email credentials not found. Skipping email sending.');
         return;
     }
 
@@ -40,10 +51,16 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
     };
 
     try {
+        console.log('[EMAIL] Attempting to send email...');
         const info = await transporter.sendMail(mailOptions);
         console.log(`[EMAIL SENT] Subject: "${title}" | Recipients: ${to.length} | MessageID: ${info.messageId}`);
         console.log(`[EMAIL RECIPIENTS]:`, to);
     } catch (error) {
         console.error('[EMAIL FAILED] Error sending meeting invite:', error);
+        console.error('[EMAIL FAILED] Error details:', {
+            name: (error as Error).name,
+            message: (error as Error).message,
+            stack: (error as Error).stack
+        });
     }
 }
