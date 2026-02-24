@@ -32,7 +32,7 @@ export async function sendMeetingInvite(to: string[], meetingDetails: any) {
     }
 
     const { title, date, time, venue, description, entryFee, link: originalLink } = meetingDetails;
-    const link = 'https://rzp.io/rzp/a82nmzwR';
+    const link = 'https://razorpay.me/@royalsservice';
 
     const mailOptions = {
         from: process.env.SMTP_FROM || process.env.EMAIL_USER, // Use configured sender or fallback to user

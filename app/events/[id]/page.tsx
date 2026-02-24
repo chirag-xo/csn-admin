@@ -109,7 +109,7 @@ export default function EventDetailsPage({ params }: { params: Promise<{ id: str
         }
 
         // TEMPORARY: Redirect to Static Payment Link for Testing
-        // window.open('https://rzp.io/rzp/RRcWtgMU', '_blank');
+        // window.open('https://razorpay.me/@royalsservice', '_blank');
 
         // --- RESTORED ORIGINAL RAZORPAY CHECKOUT FLOW ---
 
